@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import argparse
 import os
+import sys
 from typing import Optional
 
-import typer
 from dotenv import load_dotenv
 from rich import print as rprint
 from rich.table import Table
@@ -13,37 +14,63 @@ from bot.logging_config import configure_logging
 from bot.orders import place_order_with_validation
 from bot.validators import ValidationError
 
-app = typer.Typer(help="Simple Binance Futures Testnet trading bot CLI.")
 
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Simple Binance Futures Testnet trading bot CLI."
+    )
 
-@app.command("order")
-def place_order(
-    symbol: str = typer.Argument(..., help="Trading pair symbol, e.g. BTCUSDT."),
-    side: str = typer.Argument(..., help="Order side: BUY or SELL."),
-    order_type: str = typer.Argument(
-        ..., help="Order type: MARKET, LIMIT, or STOP_LIMIT."
-    ),
-    quantity: float = typer.Argument(..., help="Order quantity."),
-    price: Optional[float] = typer.Option(
-        None,
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    order_parser = subparsers.add_parser(
+        "order", help="Place an order on Binance Futures Testnet (USDT-M)."
+    )
+    order_parser.add_argument("symbol", help="Trading pair symbol, e.g. BTCUSDT.")
+    order_parser.add_argument("side", help="Order side: BUY or SELL.")
+    order_parser.add_argument(
+        "order_type",
+        help="Order type: MARKET, LIMIT, or STOP_LIMIT.",
+    )
+    order_parser.add_argument(
+        "quantity",
+        type=float,
+        help="Order quantity.",
+    )
+    order_parser.add_argument(
         "--price",
         "-p",
+        type=float,
+        required=False,
         help="Price (required for LIMIT and STOP_LIMIT orders).",
-    ),
-    stop_price: Optional[float] = typer.Option(
-        None,
+    )
+    order_parser.add_argument(
         "--stop-price",
+        type=float,
+        required=False,
         help="Trigger price for STOP_LIMIT orders.",
-    ),
-    log_file: Optional[str] = typer.Option(
-        None,
+    )
+    order_parser.add_argument(
         "--log-file",
         "-l",
+        required=False,
         help="Optional log file name inside logs/ (default: trading_bot.log).",
-    ),
-) -> None:
+    )
+
+    return parser
+
+
+def handle_order(
+    symbol: str,
+    side: str,
+    order_type: str,
+    quantity: float,
+    price: Optional[float],
+    stop_price: Optional[float],
+    log_file: Optional[str],
+) -> int:
     """
     Place a MARKET, LIMIT, or STOP_LIMIT order on Binance Futures Testnet (USDT-M).
+    Returns process exit code.
     """
     # Load environment variables from .env if present
     load_dotenv()
@@ -54,13 +81,11 @@ def place_order(
     api_secret = os.environ.get("BINANCE_API_SECRET")
 
     if not api_key or not api_secret:
-        typer.secho(
-            "BINANCE_API_KEY and BINANCE_API_SECRET must be set "
-            "(e.g. in a .env file or environment).",
-            fg=typer.colors.RED,
-            err=True,
+        rprint(
+            "[bold red]BINANCE_API_KEY and BINANCE_API_SECRET must be set "
+            "(e.g. in a .env file or environment).[/bold red]"
         )
-        raise typer.Exit(code=1)
+        return 1
 
     rprint("[bold cyan]Order request summary[/bold cyan]")
     rprint(
@@ -82,14 +107,14 @@ def place_order(
             stop_price=stop_price,
         )
     except ValidationError as exc:
-        typer.secho(f"Validation error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        rprint(f"[bold red]Validation error:[/bold red] {exc}")
+        return 1
     except BinanceApiError as exc:
-        typer.secho(f"Binance API error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        rprint(f"[bold red]Binance API error:[/bold red] {exc}")
+        return 1
     except BinanceNetworkError as exc:
-        typer.secho(f"Network error while calling Binance: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        rprint(f"[bold red]Network error while calling Binance:[/bold red] {exc}")
+        return 1
     finally:
         client.close()
 
@@ -103,12 +128,25 @@ def place_order(
 
     rprint(table)
     rprint("[bold green]Order placed successfully on Binance Futures Testnet.[/bold green]")
+    return 0
 
 
-def main() -> None:
-    app()
+def main(argv: Optional[list[str]] = None) -> None:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.command == "order":
+        exit_code = handle_order(
+            symbol=args.symbol,
+            side=args.side,
+            order_type=args.order_type,
+            quantity=args.quantity,
+            price=args.price,
+            stop_price=args.stop_price,
+            log_file=args.log_file,
+        )
+        sys.exit(exit_code)
 
 
 if __name__ == "__main__":
     main()
-

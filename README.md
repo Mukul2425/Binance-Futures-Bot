@@ -6,7 +6,7 @@ Simple CLI trading bot that places MARKET, LIMIT, and STOP_LIMIT orders on **Bin
 
 - **Market, Limit, and Stop-Limit orders** on Binance Futures Testnet (USDT-M)
 - **BUY / SELL** support
-- **CLI** built with Typer
+- **CLI** built with argparse
 - **Structured code** with clear client, order, and validation layers
 - **Logging** of requests, responses, and errors to rotating log files
 - **Environment-based credentials** with `.env` support
@@ -129,7 +129,7 @@ bot/
   orders.py         # Order placement logic with logging
   validators.py     # Input validation and normalization
   logging_config.py # Central logging configuration
-cli.py              # Typer-based CLI entry point
+cli.py              # argparse-based CLI entry point
 requirements.txt
 README.md
 .env.example
