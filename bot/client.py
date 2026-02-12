@@ -1,8 +1,8 @@
 """
 Binance Futures Testnet REST client.
 
-Implements just enough of the API to place MARKET and LIMIT orders on
-USDT-M futures using the testnet base URL:
+Implements just enough of the API to place MARKET, LIMIT, and STOP_LIMIT
+orders on USDT-M futures using the testnet base URL:
 https://testnet.binancefuture.com
 """
 
@@ -138,29 +138,43 @@ class BinanceFuturesClient:
         order_type: str,
         quantity: float,
         price: Optional[float] = None,
+        stop_price: Optional[float] = None,
         time_in_force: Optional[str] = None,
     ) -> OrderResult:
         """
-        Place a MARKET or LIMIT order on Binance Futures.
+        Place a MARKET, LIMIT, or STOP_LIMIT order on Binance Futures.
 
         :param symbol: e.g. "BTCUSDT"
         :param side: "BUY" or "SELL"
-        :param order_type: "MARKET" or "LIMIT"
+        :param order_type: "MARKET", "LIMIT", or "STOP_LIMIT"
         :param quantity: order quantity
-        :param price: required for LIMIT
-        :param time_in_force: e.g. "GTC" for LIMIT orders
+        :param price: required for LIMIT and STOP_LIMIT
+        :param stop_price: trigger price for STOP_LIMIT
+        :param time_in_force: e.g. "GTC" for LIMIT/STOP_LIMIT orders
         """
+        order_type_upper = order_type.upper()
+        # Binance Futures uses type=STOP for stop-limit orders
+        binance_type = "STOP" if order_type_upper == "STOP_LIMIT" else order_type_upper
+
         params: Dict[str, Any] = {
             "symbol": symbol.upper(),
             "side": side.upper(),
-            "type": order_type.upper(),
+            "type": binance_type,
             "quantity": quantity,
         }
 
-        if order_type.upper() == "LIMIT":
+        if order_type_upper == "LIMIT":
             if price is None:
                 raise ValueError("price is required for LIMIT orders")
             params["price"] = price
+            params["timeInForce"] = time_in_force or "GTC"
+        elif order_type_upper == "STOP_LIMIT":
+            if price is None:
+                raise ValueError("price is required for STOP_LIMIT orders")
+            if stop_price is None:
+                raise ValueError("stop_price is required for STOP_LIMIT orders")
+            params["price"] = price
+            params["stopPrice"] = stop_price
             params["timeInForce"] = time_in_force or "GTC"
 
         data = self._signed_request("POST", "/fapi/v1/order", params=params)

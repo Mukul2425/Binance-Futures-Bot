@@ -1,10 +1,10 @@
 ## Binance Futures Testnet Trading Bot (Python)
 
-Simple CLI trading bot that places MARKET and LIMIT orders on **Binance Futures Testnet (USDT-M)** using direct REST calls.
+Simple CLI trading bot that places MARKET, LIMIT, and STOP_LIMIT orders on **Binance Futures Testnet (USDT-M)** using direct REST calls.
 
 ### Features
 
-- **Market and Limit orders** on Binance Futures Testnet (USDT-M)
+- **Market, Limit, and Stop-Limit orders** on Binance Futures Testnet (USDT-M)
 - **BUY / SELL** support
 - **CLI** built with Typer
 - **Structured code** with clear client, order, and validation layers
@@ -76,18 +76,25 @@ python cli.py order BTCUSDT BUY MARKET 0.001 --log-file market_order.log
 python cli.py order BTCUSDT SELL LIMIT 0.001 --price 90000 --log-file limit_order.log
 ```
 
+#### Place a STOP_LIMIT order
+
+```bash
+python cli.py order BTCUSDT BUY STOP_LIMIT 0.001 --price 85000 --stop-price 84000 --log-file stop_limit_order.log
+```
+
 Arguments:
 
 - `symbol` (positional): trading pair, e.g. `BTCUSDT`
 - `side` (positional): `BUY` or `SELL`
-- `order_type` (positional): `MARKET` or `LIMIT`
+- `order_type` (positional): `MARKET`, `LIMIT`, or `STOP_LIMIT`
 - `quantity` (positional): order quantity (float)
-- `--price` / `-p`: required for `LIMIT` orders
+- `--price` / `-p`: required for `LIMIT` and `STOP_LIMIT` orders
+- `--stop-price`: required for `STOP_LIMIT` orders
 - `--log-file` / `-l`: optional log file name inside `logs/` (default: `trading_bot.log`)
 
 On each run, the bot will:
 
-- Validate input (symbol, side, order type, quantity, price)
+- Validate input (symbol, side, order type, quantity, price, stop price)
 - Print an **order request summary**
 - Call Binance Futures Testnet `/fapi/v1/order`
 - Print an **order response table**:
@@ -131,6 +138,6 @@ README.md
 ### Assumptions
 
 - Only **USDT-M Futures** on **Binance Testnet** are supported.
-- Only **MARKET** and **LIMIT** order types are implemented (as per core requirements).
-- Position mode, leverage, margin, and advanced order types are out of scope for this exercise.
+- **MARKET**, **LIMIT**, and **STOP_LIMIT** order types are implemented (STOP_LIMIT via Binance `type=STOP`).
+- Position mode, leverage, margin, and other advanced order types are out of scope for this exercise.
 

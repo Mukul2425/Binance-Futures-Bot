@@ -20,13 +20,20 @@ app = typer.Typer(help="Simple Binance Futures Testnet trading bot CLI.")
 def place_order(
     symbol: str = typer.Argument(..., help="Trading pair symbol, e.g. BTCUSDT."),
     side: str = typer.Argument(..., help="Order side: BUY or SELL."),
-    order_type: str = typer.Argument(..., help="Order type: MARKET or LIMIT."),
+    order_type: str = typer.Argument(
+        ..., help="Order type: MARKET, LIMIT, or STOP_LIMIT."
+    ),
     quantity: float = typer.Argument(..., help="Order quantity."),
     price: Optional[float] = typer.Option(
         None,
         "--price",
         "-p",
-        help="Price (required for LIMIT orders).",
+        help="Price (required for LIMIT and STOP_LIMIT orders).",
+    ),
+    stop_price: Optional[float] = typer.Option(
+        None,
+        "--stop-price",
+        help="Trigger price for STOP_LIMIT orders.",
     ),
     log_file: Optional[str] = typer.Option(
         None,
@@ -36,7 +43,7 @@ def place_order(
     ),
 ) -> None:
     """
-    Place a MARKET or LIMIT order on Binance Futures Testnet (USDT-M).
+    Place a MARKET, LIMIT, or STOP_LIMIT order on Binance Futures Testnet (USDT-M).
     """
     # Load environment variables from .env if present
     load_dotenv()
@@ -59,7 +66,7 @@ def place_order(
     rprint(
         f"Symbol: [bold]{symbol}[/bold], Side: [bold]{side}[/bold], "
         f"Type: [bold]{order_type}[/bold], Qty: [bold]{quantity}[/bold], "
-        f"Price: [bold]{price}[/bold]"
+        f"Price: [bold]{price}[/bold], StopPrice: [bold]{stop_price}[/bold]"
     )
 
     client = BinanceFuturesClient(api_key=api_key, api_secret=api_secret)
@@ -72,6 +79,7 @@ def place_order(
             order_type=order_type,
             quantity=quantity,
             price=price,
+            stop_price=stop_price,
         )
     except ValidationError as exc:
         typer.secho(f"Validation error: {exc}", fg=typer.colors.RED, err=True)
